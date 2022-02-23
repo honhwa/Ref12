@@ -95,68 +95,13 @@ namespace Ref12.Tests {
 			var docService = componentModel.GetService<ITextDocumentFactoryService>();
 			ITextDocument document;
 			Assert.IsTrue(docService.TryGetTextDocument(metadataTextView.TextDataModel.DocumentBuffer, out document));
-			ISymbolResolver resolver = null;
-			if (RoslynUtilities.IsRoslynInstalled(VsIdeTestHostContext.ServiceProvider))
-				resolver = new RoslynSymbolResolver();
-			else if (DTE.Version == "12.0")
-				resolver = new CSharp12Resolver();
-			if (resolver == null) {
+			ISymbolResolver resolver = new RoslynSymbolResolver();
+			if (resolver != null) {
 				var symbol = resolver.GetSymbolAt(document.FilePath, metadataTextView.FindSpan("public LogStore(SafeFileHandle").End);
 				Assert.IsFalse(symbol.HasLocalSource);
 				Assert.AreEqual("mscorlib", symbol.AssemblyName);
 				Assert.AreEqual("T:Microsoft.Win32.SafeHandles.SafeFileHandle", symbol.IndexId);
 			}
-		}
-
-		[TestMethod]
-		public async Task CSharpRoslynResolverTest() {
-			if (!RoslynUtilities.IsRoslynInstalled(VsIdeTestHostContext.ServiceProvider))
-				Assert.Inconclusive("Roslyn is not installed");
-
-			await TestCSharpResolver(new RoslynSymbolResolver());
-		}
-		[TestMethod]
-		public async Task CSharp12ResolverTest() {
-			if (DTE.Version != "12.0")
-				Assert.Inconclusive("CSharp12Resolver only works in VS 2013");
-			if (RoslynUtilities.IsRoslynInstalled(VsIdeTestHostContext.ServiceProvider))
-				Assert.Inconclusive("Cannot test native language services with Roslyn installed?");
-
-			await TestCSharpResolver(new CSharp12Resolver());
-		}
-		private async Task TestCSharpResolver(ISymbolResolver resolver) {
-			// Hop on to the UI thread so the language service APIs work
-			await Application.Current.Dispatcher.NextFrame();
-
-			var symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("\"\".Aggregate").End);
-			Assert.IsFalse(symbol.HasLocalSource);
-			Assert.AreEqual("System.Core", symbol.AssemblyName);
-			Assert.AreEqual("M:System.Linq.Enumerable.Aggregate``2(System.Collections.Generic.IEnumerable{``0},``1,System.Func{``1,``0,``1})", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("M(").End - 1);
-			Assert.IsTrue(symbol.HasLocalSource);
-			Assert.AreEqual("M:CSharp.File.A`1.B`1.M``1(`0,`1,`0,``0)", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("\tInterlocked.Add").End);
-			Assert.AreEqual("M:System.Threading.Interlocked.Add(System.Int32@,System.Int32)", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("\tstring.Join").End);
-			Assert.AreEqual("M:System.String.Join(System.String,System.String[])", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("{ Arrr").End);
-			Assert.AreEqual("M:CSharp.File.Arrr(System.Int32[0:,0:,0:][])", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("int.TryParse").End);
-			Assert.AreEqual("M:System.Int32.TryParse(System.String,System.Int32@)", symbol.IndexId);
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("System.Globalization").End);
-			Assert.IsNull(symbol);		// Ignore namespaces
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("e.Message + c").End);
-			Assert.IsNull(symbol);		// Don't crash on lambda parameters
-
-			symbol = resolver.GetSymbolAt(fileName, textView.FindSpan("ref y").End);
-			Assert.IsNull(symbol);		// Don't crash on locals
 		}
 
 		///<summary>Gets the TextView for the active document.</summary>

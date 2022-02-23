@@ -36,11 +36,7 @@ namespace Ref12.Tests {
 			DTE.ItemOperations.OpenFile(fileName).Activate();
 			textView = GetCurentTextView();
 
-			isRoslyn = RoslynUtilities.IsRoslynInstalled(VsIdeTestHostContext.ServiceProvider);
-			if (isRoslyn)
-				resolver = new RoslynSymbolResolver();
-			else
-				resolver = new VBResolver();
+			resolver = new RoslynSymbolResolver();
 		}
 
 		[TestMethod]
